@@ -1,17 +1,19 @@
 const { toBech32, fromHex } = require('@cosmjs/encoding')
 
-export const checkMissBlock = (prefix, signatures, valcons) => {
-    if (signatures.length() <= 0) return true
+module.exports.checkMissBlock = (prefix, addresses, valcons) => {
+    let check = true
 
-    signatures.forEach(sig => {
-        const sigUint8Array = fromHex(sig)
+    if (addresses.length <= 0) return check
 
-        const valconsAddr = toBech32(prefix, sigUint8Array)
+    addresses.forEach(addr => {
+        const addrUint8Array = fromHex(addr)
+
+        const valconsAddr = toBech32(prefix, addrUint8Array)
 
         if (valconsAddr === valcons) {
-            return false
+            check = false
         }
-
-        return true
     });
+
+    return check
 }

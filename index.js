@@ -9,25 +9,17 @@ let node = 'http://95.217.121.243:2071/'
 
 // let client = RpcClient(node)
 
-const setupSocket1 = async () => {
+const setupSocket = () => {
     const socketClient = new WebsocketClient(node)
-    return socketClient
-}
-
-
-const setupSocket = async () => {
-    const httpClient = new HttpClient(node)
-    const socketClient = await Tendermint34Client.create(httpClient)
     return socketClient
 }
 
 let uptimes = []
 
-app.get('/socket', async (req, res) => {
+startSocket = () => {
     try {
-        // const socket = await setupSocket()
-        let socket1 = await setupSocket1()
-        let stream = socket1.listen({
+        let socket = setupSocket()
+        let stream = socket.listen({
             "jsonrpc":"2.0", 
             "id": -1, 
             "method": "subscribe", 
@@ -35,20 +27,69 @@ app.get('/socket', async (req, res) => {
                 "query": "tm.event='NewBlock'"
             }
         })
-        // socket.subscribeNewBlock()
         stream.map(data => data)
         stream.addListener({
             next: (data) => {
-                console.log(data.data.value.block.last_commit.signatures)
+                let signInfo = data.data.value.block.last_commit.signatures
+                let valAddrs = signInfo.map(sig => sig.validator_address)
+                const check = checkMissBlock('junovalcons', valAddrs, 'junovalcons17rqsk5awpuynqask573sl25dgafm628rwvp7qq')
+                if (!check) {
+                    const height = data.data.value.block.header.height
+                    uptimes.push({
+                        status: 'success',
+                        height: height
+                    })
+                }
+                console.log(check)
             }
-        })
-        res.json({
-            data: uptimes
         })
     }
     catch (e) {
-        res.send(e.message)
+        alert(e.message)
     }
+}
+
+startSocket()
+
+// app.get('/socket', (_, res) => {
+//     try {
+//         let socket = setupSocket()
+//         let stream = socket.listen({
+//             "jsonrpc":"2.0", 
+//             "id": -1, 
+//             "method": "subscribe", 
+//             "params": {
+//                 "query": "tm.event='NewBlock'"
+//             }
+//         })
+//         stream.map(data => data)
+//         stream.addListener({
+//             next: (data) => {
+//                 let signInfo = data.data.value.block.last_commit.signatures
+//                 let valAddrs = signInfo.map(sig => sig.validator_address)
+//                 const check = checkMissBlock('junovalcons', valAddrs, 'junovalcons17rqsk5awpuynqask573sl25dgafm628rwvp7qq')
+//                 if (check) {
+//                     uptimes.push({
+//                         status: 'success',
+//                         height: 2
+//                     })
+//                 }
+//                 console.log(check)
+//             }
+//         })
+//         res.json({
+//             data: uptimes
+//         })
+//     }
+//     catch (e) {
+//         res.send(e.message)
+//     }
+// })
+
+app.get('/uptime', (req, res) => {
+    res.json({
+        data: uptimes
+    })
 })
 
 app.listen(port, () => {
